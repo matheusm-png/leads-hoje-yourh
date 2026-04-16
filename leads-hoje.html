@@ -314,7 +314,7 @@ async function loadLeads() {
 
   try {
     setStatus('Conectando…', 'info');
-    const res = await fetch('/.netlify/functions/leads');
+    const res = await fetch('/api/leads');
     const data = await res.json();
 
     if (!res.ok) {

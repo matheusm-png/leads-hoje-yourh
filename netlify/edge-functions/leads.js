@@ -1,5 +1,27 @@
-const TOKEN = Deno.env.get("RD_PRIVATE_TOKEN") || "5330953153c77adec48fe1c81587da41";
-const BASE  = "https://api.rd.services/platform";
+const CLIENT_ID     = Deno.env.get("RD_CLIENT_ID")     || "2b4d5177951b2aaefe0b7f838559c2d9";
+const CLIENT_SECRET = Deno.env.get("RD_CLIENT_SECRET") || "5330953153c77adec48fe1c81587da41";
+const AUTH_URL      = "https://api.rd.services/auth/token";
+const BASE          = "https://api.rd.services/platform";
+
+async function getAccessToken() {
+  const res = await fetch(AUTH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id:     CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      grant_type:    "client_credentials",
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Auth falhou HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+  return data.access_token;
+}
 
 export default async (request) => {
   const brt   = new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -8,6 +30,8 @@ export default async (request) => {
   const end   = `${ymd}T23:59:59`;
 
   try {
+    const token = await getAccessToken();
+
     let all  = [];
     let page = 1;
 
@@ -21,7 +45,7 @@ export default async (request) => {
 
       const res = await fetch(`${BASE}/contacts?${qs}`, {
         headers: {
-          Authorization: `Bearer ${TOKEN}`,
+          Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
       });

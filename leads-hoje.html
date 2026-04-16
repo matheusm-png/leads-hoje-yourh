@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads Hoje — RD Station</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 2px 10px rgba(30,64,175,.35);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .hl h1   { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+    .hl .sub { font-size: 11px; opacity: .75; margin-top: 2px; }
+
+    .hr { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+    .badge {
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .btn {
+      border: none; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 500; padding: 7px 14px;
+      transition: background .15s, opacity .15s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn:active   { transform: scale(.97); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .btn-copy  { background: #10b981; color: #fff; }
+    .btn-copy:not(:disabled):hover { background: #059669; }
+
+    .btn-reload { background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .btn-reload:hover { background: rgba(255,255,255,.28); }
+
+    main { padding: 18px 20px 40px; }
+
+    .status-bar {
+      display: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      border-left: 4px solid transparent;
+    }
+    .status-bar.info  { display:block; background:#eff6ff; border-color:#3b82f6; color:#1e40af; }
+    .status-bar.error { display:block; background:#fef2f2; border-color:#ef4444; color:#991b1b; }
+
+    .tw { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.1); }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: #fff;
+      font-size: 12px;
+    }
+
+    thead tr.rg th {
+      padding: 5px 10px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .6px;
+      text-align: center;
+    }
+    thead tr.rg .ga { background: #1e3a5f; color: #bfdbfe; }
+    thead tr.rg .gm { background: #374151; color: #d1d5db; }
+
+    thead tr.rc th {
+      padding: 9px 11px;
+      text-align: left; font-weight: 600; font-size: 11px;
+      white-space: nowrap;
+      border-right: 1px solid rgba(255,255,255,.12);
+    }
+    thead tr.rc .ca { background: #1e40af; color: #fff; }
+    thead tr.rc .cm { background: #4b5563; color: #f3f4f6; }
+
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover            { background: #eff6ff; }
+
+    tbody td {
+      padding: 7px 11px;
+      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid #f1f5f9;
+      color: #334155;
+      white-space: nowrap;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    tbody td:last-child { border-right: none; }
+    tbody td.tm { background: #f9fafb; border-right-color: #e9ecef; }
+
+    .state-row td {
+      text-align: center; padding: 48px 12px;
+      color: #94a3b8; font-size: 14px; border: none;
+    }
+
+    .spinner {
+      display: inline-block; width: 26px; height: 26px;
+      border: 3px solid #dbeafe; border-top-color: #3b82f6;
+      border-radius: 50%; animation: spin .75s linear infinite;
+      vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #0f172a; color: #f8fafc;
+      padding: 10px 18px; border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      opacity: 0; transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      pointer-events: none; z-index: 9999;
+    }
+    .toast.on { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hl">
+    <h1>Leads Hoje — RD Station</h1>
+    <div class="sub" id="dateLabel"></div>
+  </div>
+  <div class="hr">
+    <span class="badge" id="counter">— leads</span>
+    <button class="btn btn-copy"   id="btnCopy"   onclick="copyTsv()"   disabled>⎘ Copiar Tabela</button>
+    <button class="btn btn-reload" id="btnReload" onclick="loadLeads()">↻ Atualizar</button>
+  </div>
+</header>
+
+<main>
+  <div class="status-bar" id="statusBar"></div>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr class="rg">
+          <th colspan="14" class="ga">Dados da API — RD Station</th>
+          <th colspan="6"  class="gm">Preenchimento Manual</th>
+        </tr>
+        <tr class="rc">
+          <th class="ca">Empresa</th>
+          <th class="ca">Data</th>
+          <th class="ca">Hora</th>
+          <th class="ca">Mês</th>
+          <th class="ca">Semana</th>
+          <th class="ca">Origem</th>
+          <th class="ca">Tipo</th>
+          <th class="ca">Público</th>
+          <th class="ca">Campanha</th>
+          <th class="ca">Cargo</th>
+          <th class="ca">Nº de Colab</th>
+          <th class="ca">Telefone</th>
+          <th class="ca">Email</th>
+          <th class="ca">Identificador</th>
+          <th class="cm">ATENÇÃO</th>
+          <th class="cm">Responsável</th>
+          <th class="cm">Status</th>
+          <th class="cm">Motivo descarte</th>
+          <th class="cm">Email Corporativo?</th>
+          <th class="cm">Obs.</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr class="state-row">
+          <td colspan="20"><span class="spinner"></span>Carregando leads…</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MONTHS_PT = [
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+];
+
+let allLeads = [];
+
+/* ── date helpers ── */
+function toBRT(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d) ? null : d;
+}
+function fmtDate(iso) {
+  const d = toBRT(iso); if (!d) return '';
+  return [d.getDate(), d.getMonth()+1, d.getFullYear()].map(n=>String(n).padStart(2,'0')).join('/');
+}
+function fmtTime(iso) {
+  const d = toBRT(iso); if (!d) return '';
+  return [d.getHours(), d.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':');
+}
+function fmtMonth(iso) {
+  const d = toBRT(iso); if (!d) return '';
+  return MONTHS_PT[d.getMonth()];
+}
+function fmtWeek(iso) {
+  const d = toBRT(iso); if (!d) return '';
+  return `Semana ${Math.ceil(d.getDate() / 7)}`;
+}
+function pick(o, ...ks) {
+  for (const k of ks) { const v = o[k]; if (v != null && v !== '') return String(v); }
+  return '';
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── UI ── */
+function setStatus(msg, type) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg; el.className = `status-bar ${type}`;
+}
+function clearStatus() {
+  const el = document.getElementById('statusBar');
+  el.textContent = ''; el.className = 'status-bar';
+}
+function setCounter(n) {
+  document.getElementById('counter').textContent =
+    n == null ? '— leads' : `${n} lead${n !== 1 ? 's' : ''}`;
+}
+function showToast(msg, ms=2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('on'), ms);
+}
+
+/* ── extract ── */
+function extractRow(c) {
+  const conv = pick(c, 'last_conversion_date', 'last_marked_opportunity_date', 'updated_at');
+  return {
+    empresa : pick(c, 'company', 'company_name'),
+    data    : fmtDate(conv),
+    hora    : fmtTime(conv),
+    mes     : fmtMonth(conv),
+    semana  : fmtWeek(conv),
+    origem  : pick(c, 'traffic_source',  'last_traffic_source'),
+    tipo    : pick(c, 'traffic_medium',  'last_traffic_medium'),
+    publico : pick(c, 'traffic_value',   'last_traffic_value', 'traffic_segment'),
+    campanha: pick(c, 'campaign_name',   'last_campaign_name', 'cf_campanha'),
+    cargo   : pick(c, 'job_title'),
+    nColab  : pick(c, 'cf_employees_range','cf_numero_de_colaboradores',
+                      'cf_numero_colaboradores','cf_tamanho_empresa',
+                      'cf_funcionarios','employees_range'),
+    telefone: pick(c, 'mobile_phone','phone','personal_phone'),
+    email   : pick(c, 'email'),
+    ident   : pick(c, 'last_conversion_event_identifier','last_conversion_identifier','identifier'),
+  };
+}
+
+/* ── render ── */
+function renderTable(leads) {
+  const tbody = document.getElementById('tbody');
+  if (!leads.length) {
+    tbody.innerHTML = '<tr class="state-row"><td colspan="20">Nenhum lead encontrado para hoje.</td></tr>';
+    document.getElementById('btnCopy').disabled = true;
+    return;
+  }
+  tbody.innerHTML = leads.map(c => {
+    const r = extractRow(c);
+    const td  = (v, cls='') => `<td class="${cls}" title="${esc(v)}">${esc(v)}</td>`;
+    const tdM = () => '<td class="tm"></td>';
+    return `<tr>
+      ${td(r.empresa)}${td(r.data)}${td(r.hora)}${td(r.mes)}${td(r.semana)}
+      ${td(r.origem)}${td(r.tipo)}${td(r.publico)}${td(r.campanha)}
+      ${td(r.cargo)}${td(r.nColab)}${td(r.telefone)}${td(r.email)}${td(r.ident)}
+      ${tdM()}${tdM()}${tdM()}${tdM()}${tdM()}${tdM()}
+    </tr>`;
+  }).join('');
+  document.getElementById('btnCopy').disabled = false;
+}
+
+/* ── load ── */
+async function loadLeads() {
+  const btnReload = document.getElementById('btnReload');
+  const btnCopy   = document.getElementById('btnCopy');
+  btnReload.disabled = true;
+  btnCopy.disabled   = true;
+  clearStatus();
+  setCounter(null);
+  document.getElementById('tbody').innerHTML =
+    '<tr class="state-row"><td colspan="20"><span class="spinner"></span>Buscando leads de hoje…</td></tr>';
+
+  try {
+    setStatus('Conectando…', 'info');
+    const res = await fetch('/.netlify/functions/leads');
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    allLeads = data.contacts || [];
+    renderTable(allLeads);
+    setCounter(allLeads.length);
+    clearStatus();
+    if (!allLeads.length) setStatus('Nenhum lead com conversão registrada hoje.', 'info');
+
+  } catch (err) {
+    console.error(err);
+    setStatus(`Erro: ${err.message}`, 'error');
+    document.getElementById('tbody').innerHTML =
+      '<tr class="state-row"><td colspan="20">Não foi possível carregar os leads.</td></tr>';
+    setCounter(0);
+  } finally {
+    btnReload.disabled = false;
+  }
+}
+
+/* ── copy ── */
+function copyTsv() {
+  if (!allLeads.length) return;
+  const HEADERS = [
+    'Empresa','Data','Hora','Mês','Semana','Origem','Tipo','Público',
+    'Campanha','Cargo','Nº de Colab','Telefone','Email','Identificador',
+    'ATENÇÃO','Responsável','Status','Motivo descarte','Email Corporativo?','Obs.'
+  ];
+  const rows = allLeads.map(c => {
+    const r = extractRow(c);
+    return [r.empresa,r.data,r.hora,r.mes,r.semana,r.origem,r.tipo,r.publico,
+            r.campanha,r.cargo,r.nColab,r.telefone,r.email,r.ident,
+            '','','','','','']
+      .map(v => String(v).replace(/\t/g,' ')).join('\t');
+  });
+  const tsv = [HEADERS.join('\t'), ...rows].join('\n');
+
+  const write = t => navigator.clipboard
+    ? navigator.clipboard.writeText(t)
+    : new Promise(res => {
+        const a = document.createElement('textarea');
+        a.value = t;
+        Object.assign(a.style, { position:'fixed', left:'-9999px' });
+        document.body.appendChild(a); a.select();
+        document.execCommand('copy'); document.body.removeChild(a); res();
+      });
+
+  write(tsv)
+    .then(() => showToast('✓ Copiado! Cole direto no Excel ou Google Sheets.'))
+    .catch(() => showToast('Erro ao copiar. Tente selecionar a tabela manualmente.'));
+}
+
+/* ── init ── */
+(function () {
+  const d = new Date();
+  document.getElementById('dateLabel').textContent =
+    d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  loadLeads();
+}());
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Autorizar RD Station</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{background:#fff;border-radius:14px;padding:40px;max-width:480px;width:100%;box-shadow:0 2px 16px rgba(0,0,0,.1);text-align:center}
+    .logo{font-size:40px;margin-bottom:16px}
+    h1{font-size:22px;color:#1e293b;margin:0 0 10px}
+    p{font-size:14px;color:#64748b;line-height:1.6;margin:0 0 28px}
+    .btn{display:inline-block;padding:13px 28px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;transition:background .15s}
+    .btn:hover{background:#1d4ed8}
+    .note{font-size:12px;color:#94a3b8;margin-top:20px}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🔐</div>
+  <h1>Autorizar acesso ao RD Station</h1>
+  <p>Clique no botão abaixo para autorizar o painel a acessar seus leads.<br>Você será redirecionado ao RD Station e precisará fazer login uma única vez.</p>
+  <a id="btnAuth" class="btn" href="#">Autorizar com RD Station →</a>
+  <div class="note">Feito uma vez. Após autorizar, o painel funciona automaticamente.</div>
+</div>
+
+<script>
+  const CLIENT_ID   = "2b4d5177951b2aaefe0b7f838559c2d9";
+  const REDIRECT    = encodeURIComponent(window.location.origin + "/.netlify/functions/auth-callback");
+  const authUrl     = `https://api.rd.services/auth/dialog?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT}&response_type=code`;
+  document.getElementById("btnAuth").href = authUrl;
+</script>
+</body>
+</html>

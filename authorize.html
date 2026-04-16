@@ -24,7 +24,7 @@
 </div>
 
 <script>
-  const CLIENT_ID   = "2b4d5177951b2aaefe0b7f838559c2d9";
+  const CLIENT_ID   = "643dde12-c428-44b1-afc3-5f659e1d9e72";
   const REDIRECT    = encodeURIComponent(window.location.origin + "/.netlify/functions/auth-callback");
   const authUrl     = `https://api.rd.services/auth/dialog?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT}&response_type=code`;
   document.getElementById("btnAuth").href = authUrl;

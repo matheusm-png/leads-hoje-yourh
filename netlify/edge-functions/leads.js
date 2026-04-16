@@ -1,5 +1,5 @@
-const CLIENT_ID     = Deno.env.get("RD_CLIENT_ID")     || "2b4d5177951b2aaefe0b7f838559c2d9";
-const CLIENT_SECRET = Deno.env.get("RD_CLIENT_SECRET") || "5330953153c77adec48fe1c81587da41";
+const CLIENT_ID     = Deno.env.get("RD_CLIENT_ID")     || "643dde12-c428-44b1-afc3-5f659e1d9e72";
+const CLIENT_SECRET = Deno.env.get("RD_CLIENT_SECRET") || "2260c486c91841eb914bd16942fb6d55";
 const REFRESH_TOKEN = Deno.env.get("RD_REFRESH_TOKEN") || "";
 const BASE          = "https://api.rd.services/platform";
 

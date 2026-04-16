@@ -1,42 +1,22 @@
-const https = require("https");
+const TOKEN   = process.env.RD_PRIVATE_TOKEN || "5330953153c77adec48fe1c81587da41";
+const BASE    = "https://api.rd.station.com/platform/v2";
 
-const TOKEN = process.env.RD_PRIVATE_TOKEN || "5330953153c77adec48fe1c81587da41";
-
-function rdFetch(path) {
-  return new Promise((resolve, reject) => {
-    const req = https.request(
-      {
-        hostname: "api.rd.station.com",
-        path: "/platform/v2" + path,
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${TOKEN}`,
-          Accept: "application/json",
-        },
-      },
-      (res) => {
-        let raw = "";
-        res.on("data", (c) => (raw += c));
-        res.on("end", () => {
-          if (res.statusCode >= 400) {
-            reject(new Error(`HTTP ${res.statusCode}: ${raw.slice(0, 300)}`));
-          } else {
-            try {
-              resolve(JSON.parse(raw));
-            } catch (e) {
-              reject(new Error("Resposta inválida da API: " + raw.slice(0, 200)));
-            }
-          }
-        });
-      }
-    );
-    req.on("error", reject);
-    req.end();
+async function rdGet(path) {
+  const res = await fetch(BASE + path, {
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      Accept: "application/json",
+    },
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return res.json();
 }
 
 exports.handler = async () => {
-  // Horário de Brasília (UTC-3)
+  // Hoje no fuso de Brasília (UTC-3)
   const brt  = new Date(Date.now() - 3 * 60 * 60 * 1000);
   const ymd  = brt.toISOString().slice(0, 10);
   const start = `${ymd}T00:00:00`;
@@ -54,7 +34,7 @@ exports.handler = async () => {
         page_size: 100,
       });
 
-      const data  = await rdFetch(`/contacts?${qs}`);
+      const data  = await rdGet(`/contacts?${qs}`);
       const batch = data.contacts || data.contact || [];
       all = all.concat(batch);
 

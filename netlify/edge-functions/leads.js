@@ -12,6 +12,7 @@ async function getAccessToken() {
     body: JSON.stringify({
       client_id:     CLIENT_ID,
       client_secret: CLIENT_SECRET,
+      grant_type:    "refresh_token",
       refresh_token: REFRESH_TOKEN,
     }),
   });

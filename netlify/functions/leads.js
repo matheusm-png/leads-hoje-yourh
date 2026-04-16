@@ -1,8 +1,8 @@
 const https = require("https");
 
 const TOKEN = process.env.RD_PRIVATE_TOKEN || "5330953153c77adec48fe1c81587da41";
-const HOST  = "api.rd.station.com";
-const BASE  = "/platform/v2";
+const HOST  = "api.rd.services";
+const BASE  = "/platform";
 
 function rdGet(path) {
   return new Promise((resolve, reject) => {

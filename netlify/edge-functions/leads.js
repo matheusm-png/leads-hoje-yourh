@@ -1,5 +1,5 @@
 const TOKEN = Deno.env.get("RD_PRIVATE_TOKEN") || "5330953153c77adec48fe1c81587da41";
-const BASE  = "https://api.rd.station.com/platform/v2";
+const BASE  = "https://api.rd.services/platform";
 
 export default async (request) => {
   const brt   = new Date(Date.now() - 3 * 60 * 60 * 1000);

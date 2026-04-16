@@ -317,7 +317,10 @@ async function loadLeads() {
     const res = await fetch('/.netlify/functions/leads');
     const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    if (!res.ok) {
+      const detail = [data.error, data.cause, data.code].filter(Boolean).join(' | ');
+      throw new Error(detail || `HTTP ${res.status}`);
+    }
 
     allLeads = data.contacts || [];
     renderTable(allLeads);

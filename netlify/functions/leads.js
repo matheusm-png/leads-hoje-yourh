@@ -130,7 +130,7 @@ exports.handler = async () => {
 
     while (true) {
       const qs = new URLSearchParams({
-        event_type: "CONVERSION",
+        // event_type: "CONVERSION", // Comentado para diagnóstico
         start_date: start,
         end_date:   end,
         page_size:  100,

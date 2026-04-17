@@ -49,7 +49,12 @@ exports.handler = async (event) => {
   if (ok) {
     // Persiste tokens no Netlify Blobs para uso automático
     try {
-      const store = getStore("rd-tokens");
+      const storeOptions = { name: "rd-tokens" };
+      if (process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN) {
+        storeOptions.siteID = process.env.NETLIFY_SITE_ID;
+        storeOptions.token  = process.env.NETLIFY_AUTH_TOKEN;
+      }
+      const store = getStore(storeOptions);
       await store.setJSON("current", {
         access_token:  data.access_token,
         refresh_token: data.refresh_token,

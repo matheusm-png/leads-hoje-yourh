@@ -105,71 +105,42 @@ function mergeEventContact(ev, contact) {
 /* ── Handler ── */
 exports.handler = async () => {
   try {
+    // Agora lemos direto do nosso "banco" de leads salvos via Webhook (rd-leads)
     const storeOptions = { 
-      name: "rd-tokens",
+      name: "rd-leads",
       siteID: process.env.NETLIFY_SITE_ID || "10788d7c-668d-4399-8b58-8920990a0a69",
       token:  process.env.NETLIFY_AUTH_TOKEN || "nfp_y3jqErvshmTLhGMTiZTTTce3tuCy3tyT93e1"
     };
-    const store    = getStore(storeOptions);
-    const tokenRec = await store.get("current", { type: "json" }).catch(() => null);
+    const store = getStore(storeOptions);
 
-    if (!tokenRec?.access_token) {
-      return {
-        statusCode: 401,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Não autorizado. Acesse /authorize.html para autorizar." }),
-      };
-    }
+    // Identifica a pasta do dia atual (BRT)
+    const agora    = new Date();
+    const brasil   = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const dataYMD  = brasil.toISOString().slice(0, 10);
 
-    const ctx = { store, tokenRec, token: tokenRec.access_token };
-    const { start, end } = getSafeRangeBRT();
+    // Lista todas as chaves (leads) de hoje
+    const { blobs } = await store.list({ prefix: `${dataYMD}/` });
+    
+    // Busca o conteúdo de cada lead em paralelo
+    const leads = await Promise.all(
+      blobs.map(async (b) => {
+        return await store.get(b.key, { type: "json" });
+      })
+    );
 
-    // Debug: Parâmetros enviados
-    const debugInfo = { start, end, url: `${BASE}/events` };
-
-    // Busca sem filtros para checar se a conta tem QUALQUER dado
-    let allEvents  = [];
-    let nextCursor = null;
-
-    while (true) {
-      const qs = new URLSearchParams({
-        // start_date: start, // Comentado para ver se volta algo sem filtro
-        // end_date:   end,
-        page_size:  20, // Pegar só alguns para teste rápido
-      });
-      if (nextCursor) qs.set("cursor", nextCursor);
-
-      const data  = await rdGet(`${BASE}/events?${qs}`, ctx);
-      const batch = data.events || data.event || [];
-      allEvents = allEvents.concat(Array.isArray(batch) ? batch : []);
-
-      nextCursor = data.next_cursor || data.cursor || null;
-      if (!nextCursor || batch.length < 100) break;
-    }
-
-    // Busca detalhes de cada contato (5 em paralelo)
-    const leads = [];
-    for (let i = 0; i < allEvents.length; i += 5) {
-      const slice   = allEvents.slice(i, i + 5);
-      const details = await Promise.all(
-        slice.map(async (ev) => {
-          const uuid = ev.contact?.uuid || ev.uuid || ev.contact_uuid;
-          let contact = null;
-          if (uuid) {
-            contact = await rdGet(`${BASE}/contacts/${uuid}`, ctx).catch(() => null);
-          }
-          return mergeEventContact(ev, contact);
-        })
-      );
-      leads.push(...details);
-    }
+    // Ordena por mais recente (recebimento do webhook)
+    leads.sort((a, b) => new Date(b._received_at) - new Date(a._received_at));
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contacts: leads, debug: debugInfo }),
+      body: JSON.stringify({ 
+        contacts: leads, 
+        debug: { source: "blobs", count: leads.length, folder: dataYMD } 
+      }),
     };
   } catch (err) {
+    console.error("Erro ao listar leads:", err);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },

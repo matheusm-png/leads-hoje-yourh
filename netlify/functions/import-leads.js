@@ -7,12 +7,8 @@ exports.handler = async (event) => {
     const offset = parseInt(event.queryStringParameters?.offset || "0");
     const limit  = parseInt(event.queryStringParameters?.limit || "500");
 
-    const filePath = path.resolve(__dirname, "../../leads_extracted.json");
-    if (!fs.existsSync(filePath)) {
-      return { statusCode: 404, body: "Arquivo leads_extracted.json não encontrado." };
-    }
-    
-    const allLeads = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    // Usando require para garantir que o arquivo seja empacotado pela Netlify
+    const allLeads = require("./leads_extracted.json");
     const slice    = allLeads.slice(offset, offset + limit);
 
     const storeOptions = { 

@@ -48,13 +48,24 @@ async function rdGet(url, ctx) {
   return res.json();
 }
 
-/* ── Datas BRT ── */
-function todayRangeBRT() {
-  const brt = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  const ymd = brt.toISOString().slice(0, 10);
+/* ── Datas fuso Brasil (BRT) com margem de segurança (3 dias) ── */
+function getSafeRangeBRT() {
+  const agora    = new Date();
+  const brasil   = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  
+  // Ontem
+  const ontem = new Date(brasil);
+  ontem.setDate(brasil.getDate() - 1);
+  const dataOntem = ontem.toISOString().slice(0, 10);
+
+  // Amanhã (para cobrir qualquer delay de processamento ou fuso do servidor)
+  const amanha = new Date(brasil);
+  amanha.setDate(brasil.getDate() + 1);
+  const dataAmanha = amanha.toISOString().slice(0, 10);
+
   return {
-    start: `${ymd}T00:00:00-03:00`,
-    end:   `${ymd}T23:59:59-03:00`,
+    start: `${dataOntem}T00:00:00-03:00`,
+    end:   `${dataAmanha}T23:59:59-03:00`,
   };
 }
 
@@ -111,9 +122,9 @@ exports.handler = async () => {
     }
 
     const ctx = { store, tokenRec, token: tokenRec.access_token };
-    const { start, end } = todayRangeBRT();
+    const { start, end } = getSafeRangeBRT();
 
-    // Busca todos os eventos de conversão do dia
+    // Busca todos os eventos de conversão no período seguro (ontem a amanhã)
     let allEvents  = [];
     let nextCursor = null;
 

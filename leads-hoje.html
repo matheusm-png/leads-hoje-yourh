@@ -138,6 +138,20 @@
       pointer-events: none; z-index: 9999;
     }
     .toast.on { opacity: 1; transform: translateY(0); }
+    
+    .debug-box {
+      margin-top: 20px;
+      background: #1e293b;
+      color: #94a3b8;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      display: none;
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    .debug-box h4 { color: #f8fafc; margin-bottom: 8px; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -193,6 +207,11 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div id="debugBox" class="debug-box">
+    <h4>🛠️ Debug Info (API Response)</h4>
+    <pre id="debugContent"></pre>
   </div>
 </main>
 
@@ -332,7 +351,14 @@ async function loadLeads() {
     renderTable(allLeads);
     setCounter(allLeads.length);
     clearStatus();
-    if (!allLeads.length) setStatus('Nenhum lead com conversão registrada hoje.', 'info');
+
+    if (!allLeads.length) {
+      setStatus('Nenhum lead encontrado. Verifique os dados técnicos abaixo.', 'info');
+      document.getElementById('debugBox').style.display = 'block';
+      document.getElementById('debugContent').textContent = JSON.stringify(data, null, 2);
+    } else {
+      document.getElementById('debugBox').style.display = 'none';
+    }
 
   } catch (err) {
     console.error(err);
@@ -340,6 +366,9 @@ async function loadLeads() {
     document.getElementById('tbody').innerHTML =
       '<tr class="state-row"><td colspan="20">Não foi possível carregar os leads.</td></tr>';
     setCounter(0);
+    // Mostrar debug se houver erro
+    document.getElementById('debugBox').style.display = 'block';
+    document.getElementById('debugContent').textContent = `Local Error: ${err.message}`;
   } finally {
     btnReload.disabled = false;
   }

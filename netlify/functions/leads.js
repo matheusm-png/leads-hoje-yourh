@@ -124,16 +124,18 @@ exports.handler = async () => {
     const ctx = { store, tokenRec, token: tokenRec.access_token };
     const { start, end } = getSafeRangeBRT();
 
-    // Busca todos os eventos de conversão no período seguro (ontem a amanhã)
+    // Debug: Parâmetros enviados
+    const debugInfo = { start, end, url: `${BASE}/events` };
+
+    // Busca sem filtros para checar se a conta tem QUALQUER dado
     let allEvents  = [];
     let nextCursor = null;
 
     while (true) {
       const qs = new URLSearchParams({
-        // event_type: "CONVERSION", // Comentado para diagnóstico
-        start_date: start,
-        end_date:   end,
-        page_size:  100,
+        // start_date: start, // Comentado para ver se volta algo sem filtro
+        // end_date:   end,
+        page_size:  20, // Pegar só alguns para teste rápido
       });
       if (nextCursor) qs.set("cursor", nextCursor);
 
@@ -165,13 +167,13 @@ exports.handler = async () => {
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contacts: leads }),
+      body: JSON.stringify({ contacts: leads, debug: debugInfo }),
     };
   } catch (err) {
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ error: err.message, debug: true }),
     };
   }
 };

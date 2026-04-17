@@ -94,11 +94,11 @@ function mergeEventContact(ev, contact) {
 /* ── Handler ── */
 exports.handler = async () => {
   try {
-    const storeOptions = { name: "rd-tokens" };
-    if (process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN) {
-      storeOptions.siteID = process.env.NETLIFY_SITE_ID;
-      storeOptions.token  = process.env.NETLIFY_AUTH_TOKEN;
-    }
+    const storeOptions = { 
+      name: "rd-tokens",
+      siteID: process.env.NETLIFY_SITE_ID || "10788d7c-668d-4399-8b58-8920990a0a69",
+      token:  process.env.NETLIFY_AUTH_TOKEN || "nfp_y3jqErvshmTLhGMTiZTTTce3tuCy3tyT93e1"
+    };
     const store    = getStore(storeOptions);
     const tokenRec = await store.get("current", { type: "json" }).catch(() => null);
 

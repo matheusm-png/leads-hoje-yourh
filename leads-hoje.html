@@ -207,6 +207,7 @@
           <th class="ca">Nº de Colab</th>
           <th class="ca">Telefone</th>
           <th class="ca">Email</th>
+          <th class="ca">Etapa</th>
           <th class="ca">Identificador</th>
           <th class="cm">ATENÇÃO</th>
           <th class="cm">Responsável</th>
@@ -243,7 +244,13 @@ let allLeads = [];
 /* ── date helpers ── */
 function toBRT(iso) {
   if (!iso) return null;
-  const d = new Date(iso);
+  // Trata formato RD: 2026-04-17 07:56:20 -0300 -> 2026-04-17T07:56:20-0300
+  let cleaned = String(iso).trim()
+    .replace(/\s+/, "T")                      // Espaço vira T
+    .replace(/T(-?\d{2})(\d{2})$/, "$1:$2")  // Fuso -0300 vira -03:00
+    .replace(/T(\d{2}:\d{2}:\d{2})$/, "T$1-03:00"); // Garante fuso se faltar
+
+  const d = new Date(cleaned);
   return isNaN(d) ? null : d;
 }
 function fmtDate(iso) {
@@ -252,11 +259,11 @@ function fmtDate(iso) {
 }
 function fmtTime(iso) {
   const d = toBRT(iso); if (!d) return '';
-  return [d.getHours(), d.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':');
+  return d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 }
 function fmtMonth(iso) {
   const d = toBRT(iso); if (!d) return '';
-  return MONTHS_PT[d.getMonth()];
+  return MONTHS_PT[d.getMonth()].slice(0, 3).toUpperCase();
 }
 function fmtWeek(iso) {
   const d = toBRT(iso); if (!d) return '';
@@ -309,7 +316,8 @@ function extractRow(c) {
                       'cf_funcionarios','employees_range'),
     telefone: pick(c, 'mobile_phone','phone','personal_phone'),
     email   : pick(c, 'email'),
-    ident   : pick(c, 'last_conversion_event_identifier','last_conversion_identifier','identifier'),
+    etapa   : pick(c, 'etapa'),
+    ident   : pick(c, 'ident', 'last_conversion_event_identifier','last_conversion_identifier','identifier'),
   };
 }
 
@@ -328,7 +336,7 @@ function renderTable(leads) {
     return `<tr>
       ${td(r.empresa)}${td(r.data)}${td(r.hora)}${td(r.mes)}${td(r.semana)}
       ${td(r.origem)}${td(r.tipo)}${td(r.publico)}${td(r.campanha)}
-      ${td(r.cargo)}${td(r.nColab)}${td(r.telefone)}${td(r.email)}${td(r.ident)}
+      ${td(r.cargo)}${td(r.nColab)}${td(r.telefone)}${td(r.email)}${td(r.etapa)}${td(r.ident)}
       ${tdM()}${tdM()}${tdM()}${tdM()}${tdM()}${tdM()}
     </tr>`;
   }).join('');

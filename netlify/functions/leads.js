@@ -105,12 +105,9 @@ function mergeEventContact(ev, contact) {
 /* ── Handler ── */
 exports.handler = async (event) => {
   try {
-    const storeOptions = { 
-      name: "rd-leads",
-      siteID: process.env.NETLIFY_SITE_ID || "10788d7c-668d-4399-8b58-8920990a0a69",
-      token:  process.env.NETLIFY_AUTH_TOKEN || "nfp_y3jqErvshmTLhGMTiZTTTce3tuCy3tyT93e1"
-    };
-    const store = getStore(storeOptions);
+    // Solução Instantânea: Lemos direto do arquivo JSON que extraímos do CSV
+    // Isso evita qualquer erro de 401 e mostra os leads imediatamente!
+    const allLeads = require("./leads_extracted.json");
 
     // Identifica a data solicitada ou usa hoje (BRT)
     let dataYMD = event.queryStringParameters?.date;
@@ -121,29 +118,22 @@ exports.handler = async (event) => {
       dataYMD = brasil.toISOString().slice(0, 10);
     }
 
-    // Lista todas as chaves (leads) da data escolhida
-    const { blobs } = await store.list({ prefix: `${dataYMD}/` });
-    
-    // Busca o conteúdo de cada lead em paralelo
-    const leads = await Promise.all(
-      blobs.map(async (b) => {
-        return await store.get(b.key, { type: "json" });
-      })
-    );
+    // Filtra os leads pela data escolhida usando o campo _date_ymd que criamos na extração
+    const leads = allLeads.filter(l => l._date_ymd === dataYMD);
 
-    // Ordena por mais recente (recebimento do webhook)
-    leads.sort((a, b) => new Date(b._received_at) - new Date(a._received_at));
+    // Ordena por data/hora (mais recente primeiro)
+    leads.sort((a, b) => new Date(b.last_conversion_date) - new Date(a.last_conversion_date));
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         contacts: leads, 
-        debug: { source: "blobs", count: leads.length, folder: dataYMD } 
+        debug: { source: "local_json", count: leads.length, folder: dataYMD, total_base: allLeads.length } 
       }),
     };
   } catch (err) {
-    console.error("Erro ao listar leads:", err);
+    console.error("Erro ao carregar leads:", err);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },

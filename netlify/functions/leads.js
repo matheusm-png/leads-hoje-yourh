@@ -48,23 +48,23 @@ async function rdGet(url, ctx) {
   return res.json();
 }
 
-/* ── Datas fuso Brasil (BRT) com margem de segurança (3 dias) ── */
+/* ── Busca Profunda (30 dias) para Diagnóstico ── */
 function getSafeRangeBRT() {
   const agora    = new Date();
   const brasil   = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
   
-  // Ontem
-  const ontem = new Date(brasil);
-  ontem.setDate(brasil.getDate() - 1);
-  const dataOntem = ontem.toISOString().slice(0, 10);
+  // 30 dias atrás
+  const inicio = new Date(brasil);
+  inicio.setDate(brasil.getDate() - 30);
+  const dataInicio = inicio.toISOString().slice(0, 10);
 
-  // Amanhã (para cobrir qualquer delay de processamento ou fuso do servidor)
+  // Amanhã
   const amanha = new Date(brasil);
   amanha.setDate(brasil.getDate() + 1);
   const dataAmanha = amanha.toISOString().slice(0, 10);
 
   return {
-    start: `${dataOntem}T00:00:00-03:00`,
+    start: `${dataInicio}T00:00:00-03:00`,
     end:   `${dataAmanha}T23:59:59-03:00`,
   };
 }

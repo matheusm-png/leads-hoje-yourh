@@ -13,8 +13,8 @@ exports.handler = async (event) => {
 
     const storeOptions = { 
       name: "rd-leads",
-      siteID: process.env.NETLIFY_SITE_ID || "10788d7c-668d-4399-8b58-8920990a0a69",
-      token:  process.env.NETLIFY_AUTH_TOKEN || "nfp_y3jqErvshmTLhGMTiZTTTce3tuCy3tyT93e1"
+      siteID: "10788d7c-668d-4399-8b58-8920990a0a69",
+      token:  "nfp_y3jqErvshmTLhGMTiZTTTce3tuCy3tyT93e1"
     };
     const store = getStore(storeOptions);
 

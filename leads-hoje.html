@@ -314,7 +314,7 @@ async function loadLeads() {
 
   try {
     setStatus('Conectando…', 'info');
-    const res = await fetch('/api/leads');
+    const res = await fetch('/.netlify/functions/leads');
     const data = await res.json();
 
     if (res.status === 401 || (data.error && data.error.includes('expirado'))) {

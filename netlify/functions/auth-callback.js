@@ -1,18 +1,20 @@
-const https = require("https");
+const https    = require("https");
+const querystr = require("querystring");
+const { getStore } = require("@netlify/blobs");
 
 const CLIENT_ID     = process.env.RD_CLIENT_ID     || "643dde12-c428-44b1-afc3-5f659e1d9e72";
 const CLIENT_SECRET = process.env.RD_CLIENT_SECRET || "2260c486c91841eb914bd16942fb6d55";
 
-function post(body) {
+function postForm(params) {
   return new Promise((resolve, reject) => {
-    const payload = JSON.stringify(body);
+    const payload = querystr.stringify(params);
     const req = https.request(
       {
         hostname: "api.rd.services",
         path: "/auth/token",
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
           "Content-Length": Buffer.byteLength(payload),
         },
       },
@@ -30,51 +32,54 @@ function post(body) {
 
 exports.handler = async (event) => {
   const code = event.queryStringParameters?.code;
+  if (!code) return { statusCode: 400, body: "Parâmetro 'code' ausente." };
 
-  if (!code) {
-    return { statusCode: 400, body: "Parâmetro 'code' ausente." };
-  }
-
-  const { status, body } = await post({
+  const { status, body } = await postForm({
     client_id:     CLIENT_ID,
     client_secret: CLIENT_SECRET,
+    grant_type:    "authorization_code",
     code,
   });
 
   let data;
   try { data = JSON.parse(body); } catch { data = { raw: body }; }
 
-  const ok = status < 300 && data.refresh_token;
+  const ok = status < 300 && data.access_token;
+
+  if (ok) {
+    // Persiste tokens no Netlify Blobs para uso automático
+    try {
+      const store = getStore("rd-tokens");
+      await store.setJSON("current", {
+        access_token:  data.access_token,
+        refresh_token: data.refresh_token,
+        obtained_at:   Date.now(),
+      });
+    } catch (e) {
+      console.warn("Blobs indisponível:", e.message);
+    }
+  }
+
+  const netlifyUrl = `https://${event.headers?.host || "leads-hoje-yourh.netlify.app"}`;
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Autorização RD Station</title>
 <style>
-  body{font-family:system-ui,sans-serif;max-width:600px;margin:60px auto;padding:20px;background:#f0f4f8}
+  body{font-family:system-ui,sans-serif;max-width:620px;margin:60px auto;padding:20px;background:#f0f4f8}
   .card{background:#fff;border-radius:12px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
-  h2{margin:0 0 16px;color:${ok ? "#166534" : "#991b1b"}}
-  pre{background:#f1f5f9;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;word-break:break-all;white-space:pre-wrap}
-  .label{font-size:13px;font-weight:600;color:#475569;margin:12px 0 4px}
-  .token{background:#dcfce7;border:1px solid #86efac;padding:12px 16px;border-radius:8px;font-family:monospace;font-size:13px;word-break:break-all}
+  h2{margin:0 0 12px;color:${ok ? "#166534" : "#991b1b"}}
+  pre{background:#f1f5f9;padding:16px;border-radius:8px;font-size:11px;overflow-x:auto;word-break:break-all;white-space:pre-wrap}
   .btn{display:inline-block;margin-top:20px;padding:10px 20px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500}
-  ol{font-size:13px;line-height:1.8;color:#374151}
+  .ok-box{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;font-size:14px;color:#166534;margin-top:8px}
 </style></head><body><div class="card">
 ${ok ? `
   <h2>✅ Autorização concluída!</h2>
-  <p style="font-size:14px;color:#374151">Copie o <strong>refresh_token</strong> abaixo e adicione como variável de ambiente no Netlify:</p>
-  <div class="label">refresh_token</div>
-  <div class="token">${data.refresh_token}</div>
-  <ol style="margin-top:20px">
-    <li>No Netlify: <strong>Site configuration → Environment variables</strong></li>
-    <li>Crie a variável: <code>RD_REFRESH_TOKEN</code></li>
-    <li>Cole o token acima como valor</li>
-    <li>Clique em <strong>Save</strong> e depois <strong>Trigger deploy</strong></li>
-  </ol>
-  <a class="btn" href="/leads-hoje.html">Abrir painel de leads →</a>
+  <div class="ok-box">Tokens salvos automaticamente. O painel já está pronto para usar e vai se renovar sozinho.</div>
+  <a class="btn" href="${netlifyUrl}/leads-hoje.html">Abrir painel de leads →</a>
 ` : `
   <h2>❌ Erro na autorização</h2>
-  <p style="font-size:14px;color:#374151">Resposta da API (status ${status}):</p>
   <pre>${JSON.stringify(data, null, 2)}</pre>
-  <a class="btn" href="/authorize.html">Tentar novamente</a>
+  <a class="btn" href="${netlifyUrl}/authorize.html">Tentar novamente</a>
 `}
 </div></body></html>`;
 

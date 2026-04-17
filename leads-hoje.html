@@ -317,6 +317,12 @@ async function loadLeads() {
     const res = await fetch('/api/leads');
     const data = await res.json();
 
+    if (res.status === 401 || (data.error && data.error.includes('expirado'))) {
+      setStatus('Token expirado. <a href="/authorize.html" style="color:#1d4ed8;font-weight:600">Clique aqui para renovar</a> (leva 1 min).', 'error');
+      document.getElementById('tbody').innerHTML = '<tr class="state-row"><td colspan="20">Token expirado — renove pelo link acima.</td></tr>';
+      setCounter(0);
+      return;
+    }
     if (!res.ok) {
       const detail = [data.error, data.cause, data.code].filter(Boolean).join(' | ');
       throw new Error(detail || `HTTP ${res.status}`);

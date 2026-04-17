@@ -103,9 +103,8 @@ function mergeEventContact(ev, contact) {
 }
 
 /* ── Handler ── */
-exports.handler = async () => {
+exports.handler = async (event) => {
   try {
-    // Agora lemos direto do nosso "banco" de leads salvos via Webhook (rd-leads)
     const storeOptions = { 
       name: "rd-leads",
       siteID: process.env.NETLIFY_SITE_ID || "10788d7c-668d-4399-8b58-8920990a0a69",
@@ -113,12 +112,16 @@ exports.handler = async () => {
     };
     const store = getStore(storeOptions);
 
-    // Identifica a pasta do dia atual (BRT)
-    const agora    = new Date();
-    const brasil   = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const dataYMD  = brasil.toISOString().slice(0, 10);
+    // Identifica a data solicitada ou usa hoje (BRT)
+    let dataYMD = event.queryStringParameters?.date;
+    
+    if (!dataYMD) {
+      const agora    = new Date();
+      const brasil   = new Date(agora.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+      dataYMD = brasil.toISOString().slice(0, 10);
+    }
 
-    // Lista todas as chaves (leads) de hoje
+    // Lista todas as chaves (leads) da data escolhida
     const { blobs } = await store.list({ prefix: `${dataYMD}/` });
     
     // Busca o conteúdo de cada lead em paralelo

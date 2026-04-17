@@ -58,6 +58,20 @@
     .btn-reload { background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.3); }
     .btn-reload:hover { background: rgba(255,255,255,.28); }
 
+    .date-picker {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+    .date-picker::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+    }
+
     main { padding: 18px 20px 40px; }
 
     .status-bar {
@@ -163,6 +177,7 @@
   </div>
   <div class="hr">
     <span class="badge" id="counter">— leads</span>
+    <input type="date" class="date-picker" id="dateFilter" onchange="loadLeads()">
     <button class="btn btn-copy"   id="btnCopy"   onclick="copyTsv()"   disabled>⎘ Copiar Tabela</button>
     <button class="btn btn-reload" id="btnReload" onclick="loadLeads()">↻ Atualizar</button>
   </div>
@@ -324,16 +339,27 @@ function renderTable(leads) {
 async function loadLeads() {
   const btnReload = document.getElementById('btnReload');
   const btnCopy   = document.getElementById('btnCopy');
+  const dateInput = document.getElementById('dateFilter');
+  
+  const selectedDate = dateInput.value;
+  
   btnReload.disabled = true;
   btnCopy.disabled   = true;
   clearStatus();
   setCounter(null);
   document.getElementById('tbody').innerHTML =
-    '<tr class="state-row"><td colspan="20"><span class="spinner"></span>Buscando leads de hoje…</td></tr>';
+    `<tr class="state-row"><td colspan="20"><span class="spinner"></span>Buscando leads de ${selectedDate || 'hoje'}…</td></tr>`;
 
   try {
     setStatus('Conectando…', 'info');
-    const res = await fetch('/.netlify/functions/leads');
+    
+    // Atualiza o rótulo de data amigável se for hoje
+    const d = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+    document.getElementById('dateLabel').textContent =
+      d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    const url = selectedDate ? `/.netlify/functions/leads?date=${selectedDate}` : '/.netlify/functions/leads';
+    const res = await fetch(url);
     const data = await res.json();
 
     if (res.status === 401 || (data.error && data.error.includes('expirado'))) {
@@ -409,6 +435,9 @@ function copyTsv() {
 /* ── init ── */
 (function () {
   const d = new Date();
+  const ymd = d.toISOString().slice(0, 10);
+  document.getElementById('dateFilter').value = ymd;
+  
   document.getElementById('dateLabel').textContent =
     d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   loadLeads();
